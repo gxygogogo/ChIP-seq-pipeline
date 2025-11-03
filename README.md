@@ -159,4 +159,26 @@ cut -f4,9 tmp1 | sort | uniq > tmp2
 awk 'BEGIN{ORS="\t";TMP="TMP"}{if($1==TMP) print $2;else print "\n"$0;TMP=$1}' tmp2 | awk 'BEGIN{OFS="\t";}NR!=1{if($0~"DistalNIPBL/CandidateInsulator") print $1,"DistalNIPBL/CandidateInsulator";else if($0~"ActivePromoter") print $1,"ActivePromoter";else if($0~"CandidateStrongEnhancer") print $1,"CandidateStrongEnhancer";else if($0~"CandidateWeakEnhancer/DNase") print $1,"CandidateWeakEnhancer/DNase";else if($0~"TranscriptionAssociated") print $1,"TranscriptionAssociated";else if($0~"Heterochromatin/Repetitive/CopyNumberVariation") print $1,"Heterochromatin/Repetitive/CopyNumberVariation";else if($0~"InactivePromoter") print $1,"InactivePromoter";else if($0~"LowActivityProximalToActive") print $1,"LowActivityProximalToActive";else if($0~"PolycombRepressed") print $1,"PolycombRepressed";}' > WT_only_chromHMM.txt
 ```
 ### Step6. peak下游分析
+依据peak文件和bam文件，计算每个peak区域的覆盖强度，作为count值。
+```{shell}
+WT_H3K27me3=/public1/xinyu/CohesinProject/FinalizedCutTag/HDAC1/peaks/GM12878_WT_CutTag_HDAC1.peaks
+SA1KO_HDAC1=/public1/xinyu/CohesinProject/FinalizedCutTag/HDAC1/peaks/GM12878_SA1KO_CutTag_HDAC1.peaks
+SA2KO_HDAC1=/public1/xinyu/CohesinProject/FinalizedCutTag/HDAC1/peaks/GM12878_SA2KO_CutTag_HDAC1.peaks
+
+cat ${WT_BRD4} ${SA1KO_BRD4} ${SA2KO_BRD4} \
+    ${WT_H3K27ac} ${SA1KO_H3K27ac} ${SA2KO_H3K27ac} \
+    ${WT_NIPBL} ${SA1KO_NIPBL} ${SA2KO_NIPBL} \
+    ${WT_P300} ${SA1KO_P300} ${SA2KO_P300} \
+    ${WT_HDAC1} ${SA1KO_HDAC1} ${SA2KO_HDAC1} \
+    ${WT_CTCF} ${SA1KO_CTCF} ${SA2KO_CTCF} | \
+   sort -k1,1 -k2,2n | uniq | bedtools merge -i - | awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$1":"$2"-"$3}' > GM12878_CutTag_peakRegion.bed
+
+
+
+factor=HDAC1
+for PREFIX in GM12878_CutTag_${factor} GM12878_SA1KO_CutTag_${factor} GM12878_SA2KO_CutTag_${factor}
+do
+bedtools coverage -a GM12878_CutTag_peakRegion.bed -b /public1/xinyu/CohesinProject/FinalizedCutTag/${factor}/${PREFIX}.bam | cut -f4-5 > ${PREFIX}.counts
+done
+```
 使用DESeq2计算差异peak，然后进行下游分析。
